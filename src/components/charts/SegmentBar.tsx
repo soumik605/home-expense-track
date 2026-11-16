@@ -1,5 +1,5 @@
 import type { Group } from '../../lib/analytics';
-import { money, moneyCompact } from '../../lib/format';
+import { money, moneyCompact, percent } from '../../lib/format';
 
 interface Props {
   title: string;
@@ -15,7 +15,7 @@ interface Props {
 export function SegmentBar({ title, groups, colorOf, inkOf, selected, onToggle }: Props) {
   const total = groups.reduce((s, g) => s + g.gross, 0);
   const parts = groups.filter((g) => g.gross > 0);
-  const label = parts.map((g) => `${g.key} ${money(g.gross)} (${((g.gross / total) * 100).toFixed(0)}%)`).join(', ');
+  const label = parts.map((g) => `${g.key} ${money(g.gross)} (${percent((g.gross / total) * 100)})`).join(', ');
 
   return (
     <div className="segment">
@@ -35,10 +35,10 @@ export function SegmentBar({ title, groups, colorOf, inkOf, selected, onToggle }
                 className={`seg ${dim ? 'is-dim' : ''}`}
                 style={{ flexGrow: g.gross, background: colorOf(g.key), color: inkOf?.(g.key) ?? '#fff' }}
                 onClick={() => onToggle(g.key)}
-                title={`${g.key}: ${money(g.gross)} · ${pct.toFixed(1)}% · ${g.count} ${g.count === 1 ? 'entry' : 'entries'}`}
-                aria-label={`${g.key}, ${money(g.gross)}, ${pct.toFixed(0)} percent. Click to filter.`}
+                title={`${g.key}: ${money(g.gross)} · ${percent(pct)} · ${g.count} ${g.count === 1 ? 'entry' : 'entries'}`}
+                aria-label={`${g.key}, ${money(g.gross)}, ${percent(pct)}. Click to filter.`}
               >
-                {pct >= 14 && <span>{pct.toFixed(0)}%</span>}
+                {pct >= 18 && <span>{percent(pct)}</span>}
               </button>
             );
           })}

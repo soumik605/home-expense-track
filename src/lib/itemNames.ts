@@ -94,13 +94,13 @@ const BN: Record<string, string> = {
   uncategorized: 'অশ্রেণীবদ্ধ',
 };
 
-const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+export const itemKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export type Lang = 'bn' | 'en';
 
 /** Bengali name for an item, or null when there's no translation. */
 export function bengaliItem(name: string): string | null {
-  return BN[key(name)] ?? null;
+  return BN[itemKey(name)] ?? null;
 }
 
 export function itemLabel(name: string, lang: Lang): string {

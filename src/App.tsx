@@ -7,11 +7,14 @@ import { SegmentBar } from './components/charts/SegmentBar';
 import { ConnectDialog } from './components/ConnectDialog';
 import { FilterBar } from './components/FilterBar';
 import { Header } from './components/Header';
+import { ItemCards } from './components/ItemCards';
 import { KpiCards } from './components/KpiCards';
 import { MaterialsTable } from './components/MaterialsTable';
+import { TabbedCard, type Panel } from './components/TabbedCard';
 import { TransactionsTable } from './components/TransactionsTable';
 import { useExpenseData } from './hooks/useExpenseData';
 import { activeFilterCount, useFilters } from './hooks/useFilters';
+import { useMediaQuery } from './hooks/useMediaQuery';
 import { useTheme } from './hooks/useTheme';
 import { applyFilters, cumulative, distinct, groupBy, materials, monthly, rangeSummary, toCsv, totals } from './lib/analytics';
 import { colorMap, OTHER_COLOR, seriesColor, STATUS_COLOR, statusTone } from './lib/colors';
@@ -90,6 +93,79 @@ export default function App() {
   };
 
   const filteredActive = activeFilterCount(filters) > 0;
+
+  // Phones show these three as tabs in one card; wider screens lay them out side by side.
+  const isMobile = useMediaQuery('(max-width: 640px)');
+  const insightPanels: Panel[] = [
+    {
+      id: 'monthly',
+      label: 'Monthly',
+      title: 'Monthly spend',
+      sub: hasSource ? 'Gross amount by month, split by source of funds' : 'Gross amount by month',
+      content: (
+        <MonthlyChart
+          data={monthData}
+          stacks={stacks}
+          colors={hasSource ? sourceColors : singleStackColors}
+          theme={theme}
+          stackLabel="Source of funds"
+          onMonthClick={pickMonth}
+        />
+      ),
+    },
+    {
+      id: 'funding',
+      label: 'Funding',
+      title: 'Where the money comes from',
+      sub: 'Click a segment to filter',
+      content: (
+        <div className="segments">
+          {hasSource && (
+            <SegmentBar
+              title="Source of funds"
+              groups={bySource}
+              colorOf={(k) => sourceColors.get(k) ?? OTHER_COLOR[theme]}
+              inkOf={(k) => (sourceColors.get(k) === '#eda100' ? '#0b0b0b' : '#fff')}
+              selected={filters.sources}
+              onToggle={(k) => toggle('sources', k)}
+            />
+          )}
+          {hasMode && (
+            <SegmentBar
+              title="Payment mode"
+              groups={byMode}
+              colorOf={(k) => modeColors.get(k) ?? OTHER_COLOR[theme]}
+              inkOf={(k) => (modeColors.get(k) === '#eda100' ? '#0b0b0b' : '#fff')}
+              selected={filters.modes}
+              onToggle={(k) => toggle('modes', k)}
+            />
+          )}
+          <SegmentBar
+            title="Payment status"
+            groups={byStatus}
+            colorOf={statusColor}
+            inkOf={(k) => (statusTone(k) === 'warning' ? '#0b0b0b' : '#fff')}
+            selected={filters.statuses}
+            onToggle={(k) => toggle('statuses', k)}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'cumulative',
+      label: 'Cumulative',
+      title: 'Cumulative spend',
+      sub: 'Running total of gross amount',
+      content: <CumulativeChart data={cumData} theme={theme} color={totalColor} />,
+    },
+  ];
+  // All-time item order: gives each item card a colour that stays put when filtering.
+  const itemOrder = useMemo(() => distinct(rows, (r) => r.subcategory), [rows]);
+  const itemCard = (
+    <Card title="Spend by item" sub="Click an item to filter · share of the current view">
+      <CategoryBars groups={byItem} selected={filters.subcategories} color={totalColor} onToggle={(k) => toggle('subcategories', k)} />
+    </Card>
+  );
 
   return (
     <>
@@ -203,65 +279,36 @@ export default function App() {
               </div>
             ) : (
               <>
-                <div className="grid grid-wide">
-                  <Card title="Monthly spend" sub={hasSource ? 'Gross amount by month, split by source of funds' : 'Gross amount by month'}>
-                    <MonthlyChart
-                      data={monthData}
-                      stacks={stacks}
-                      colors={hasSource ? sourceColors : singleStackColors}
-                      theme={theme}
-                      stackLabel="Source of funds"
-                      onMonthClick={pickMonth}
-                    />
-                  </Card>
-
-                  <Card title="Where the money comes from" sub="Click a segment to filter">
-                    <div className="segments">
-                      {hasSource && (
-                        <SegmentBar
-                          title="Source of funds"
-                          groups={bySource}
-                          colorOf={(k) => sourceColors.get(k) ?? OTHER_COLOR[theme]}
-                          inkOf={(k) => (sourceColors.get(k) === '#eda100' ? '#0b0b0b' : '#fff')}
-                          selected={filters.sources}
-                          onToggle={(k) => toggle('sources', k)}
-                        />
-                      )}
-                      {hasMode && (
-                        <SegmentBar
-                          title="Payment mode"
-                          groups={byMode}
-                          colorOf={(k) => modeColors.get(k) ?? OTHER_COLOR[theme]}
-                          inkOf={(k) => (modeColors.get(k) === '#eda100' ? '#0b0b0b' : '#fff')}
-                          selected={filters.modes}
-                          onToggle={(k) => toggle('modes', k)}
-                        />
-                      )}
-                      <SegmentBar
-                        title="Payment status"
-                        groups={byStatus}
-                        colorOf={statusColor}
-                        inkOf={(k) => (statusTone(k) === 'warning' ? '#0b0b0b' : '#fff')}
-                        selected={filters.statuses}
-                        onToggle={(k) => toggle('statuses', k)}
+                {isMobile ? (
+                  <>
+                    <section className="item-section" aria-labelledby="items-heading">
+                      <div className="item-section-head">
+                        <h2 id="items-heading" className="card-title">
+                          Spend by item
+                        </h2>
+                        <span className="card-sub">Tap a card to filter</span>
+                      </div>
+                      <ItemCards
+                        groups={byItem}
+                        order={itemOrder}
+                        selected={filters.subcategories}
+                        onToggle={(k) => toggle('subcategories', k)}
                       />
+                    </section>
+                    <TabbedCard panels={insightPanels} label="Spending charts" collapsible />
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-wide">
+                      <PanelCard panel={insightPanels[0]} />
+                      <PanelCard panel={insightPanels[1]} />
                     </div>
-                  </Card>
-                </div>
-
-                <div className="grid grid-half">
-                  <Card title="Spend by item" sub="Click an item to filter · share of the current view">
-                    <CategoryBars
-                      groups={byItem}
-                      selected={filters.subcategories}
-                      color={totalColor}
-                      onToggle={(k) => toggle('subcategories', k)}
-                    />
-                  </Card>
-                  <Card title="Cumulative spend" sub="Running total of gross amount">
-                    <CumulativeChart data={cumData} theme={theme} color={totalColor} />
-                  </Card>
-                </div>
+                    <div className="grid grid-half">
+                      {itemCard}
+                      <PanelCard panel={insightPanels[2]} />
+                    </div>
+                  </>
+                )}
 
                 <Card title="Materials" sub="Quantities bought and average rate, for entries with a unit">
                   <MaterialsTable rows={materialRows} onPick={(s) => patch({ subcategories: [s] })} />
@@ -331,6 +378,14 @@ function Card({ title, sub, action, children }: { title: string; sub?: string; a
   );
 }
 
+function PanelCard({ panel }: { panel: Panel }) {
+  return (
+    <Card title={panel.title} sub={panel.sub}>
+      {panel.content}
+    </Card>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="skeleton-wrap" aria-busy="true" aria-label="Loading your sheet">
@@ -338,7 +393,7 @@ function LoadingSkeleton() {
       <div className="skel skel-bar" />
       <div className="kpis">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skel skel-kpi" />
+          <div key={i} className={`skel skel-kpi ${i > 0 ? 'hide-mobile' : ''}`} />
         ))}
       </div>
       <div className="grid grid-wide">

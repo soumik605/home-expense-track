@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { Group } from '../../lib/analytics';
-import { money, moneyCompact } from '../../lib/format';
+import { money, moneyRupees, percent } from '../../lib/format';
 
 interface Props {
   groups: Group[];
@@ -36,7 +36,7 @@ export function CategoryBars({ groups, selected, color, onToggle }: Props) {
                 className={`hbar ${on ? 'is-on' : ''} ${dim ? 'is-dim' : ''}`}
                 onClick={() => onToggle(g.key)}
                 aria-pressed={on}
-                title={`${item(g.key)}: ${money(g.gross)} · ${g.count} ${g.count === 1 ? 'entry' : 'entries'} · ${pct.toFixed(1)}%`}
+                title={`${item(g.key)}: ${money(g.gross)} · ${g.count} ${g.count === 1 ? 'entry' : 'entries'} · ${percent(pct)}`}
               >
                 <span className="hbar-label" lang={itemLang(g.key)}>
                   {item(g.key)}
@@ -45,8 +45,8 @@ export function CategoryBars({ groups, selected, color, onToggle }: Props) {
                   <span className="hbar-fill" style={{ width: `${(g.gross / max) * 100}%`, background: color }} />
                 </span>
                 <span className="hbar-value">
-                  {moneyCompact(g.gross)}
-                  <span className="hbar-pct">{pct < 1 ? '<1' : pct.toFixed(0)}%</span>
+                  {moneyRupees(g.gross)}
+                  <span className="hbar-pct">{percent(pct)}</span>
                 </span>
               </button>
             </li>

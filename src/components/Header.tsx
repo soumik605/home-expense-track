@@ -67,7 +67,8 @@ export function Header({ config, sheetName, syncedAt, status, theme, onToggleThe
             type="button"
             className={`source-pill ${status === 'error' ? 'is-error' : ''} ${config.kind === 'sample' ? 'is-sample' : ''}`}
             onClick={onConnect}
-            title="Change data source"
+            title={`${sourceLabel(config)} · ${meta} — change data source`}
+            aria-label={`Data source: ${sourceLabel(config)}, ${meta}. Change data source`}
           >
             <span className="source-icon" aria-hidden>
               {status === 'error' ? <TriangleAlert size={16} /> : <Icon size={16} />}

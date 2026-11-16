@@ -1,6 +1,6 @@
 import { CircleCheck, CircleAlert, Wallet, CalendarRange, IndianRupee, HandCoins } from 'lucide-react';
 import type { Totals } from '../lib/analytics';
-import { formatMonth, money, moneyCompact } from '../lib/format';
+import { formatMonth, money, moneyCompact, percent } from '../lib/format';
 
 interface Props {
   totals: Totals;
@@ -19,7 +19,7 @@ function Sparkline({ values }: { values: number[] }) {
   const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const [lx, ly] = pts[pts.length - 1];
   return (
-    <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden>
+    <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
       <path d={`${d} L${lx},${h} L4,${h} Z`} className="spark-area" />
       <path d={d} className="spark-line" />
       <circle cx={lx} cy={ly} r={3.5} className="spark-dot" />
@@ -51,14 +51,14 @@ export function KpiCards({ totals, monthlyTotals, grandTotal, filtered }: Props)
             </div>
             <div className="kpi-sub">
               {totals.count} {totals.count === 1 ? 'entry' : 'entries'}
-              {filtered && grandTotal > 0 && <> · {share.toFixed(share < 10 ? 1 : 0)}% of all spend</>}
+              {filtered && grandTotal > 0 && <> · {percent(share)} of all spend</>}
             </div>
           </div>
           <Sparkline values={monthlyTotals.map((m) => m.total)} />
         </div>
       </article>
 
-      <article className="kpi">
+      <article className="kpi hide-mobile">
         <div className="kpi-head">
           <span className="kpi-icon" aria-hidden>
             <Wallet size={16} />
@@ -71,10 +71,10 @@ export function KpiCards({ totals, monthlyTotals, grandTotal, filtered }: Props)
         <div className="meter" role="meter" aria-valuenow={Math.round(paidPct)} aria-valuemin={0} aria-valuemax={100} aria-label="Share paid">
           <span style={{ width: `${Math.min(100, paidPct)}%` }} />
         </div>
-        <div className="kpi-sub">{paidPct.toFixed(paidPct % 1 && paidPct < 99.95 ? 1 : 0)}% of gross settled</div>
+        <div className="kpi-sub">{percent(paidPct)} of gross settled</div>
       </article>
 
-      <article className="kpi">
+      <article className="kpi hide-mobile">
         <div className="kpi-head">
           <span className="kpi-icon" aria-hidden>
             <HandCoins size={16} />
@@ -95,7 +95,7 @@ export function KpiCards({ totals, monthlyTotals, grandTotal, filtered }: Props)
         )}
       </article>
 
-      <article className="kpi">
+      <article className="kpi hide-mobile">
         <div className="kpi-head">
           <span className="kpi-icon" aria-hidden>
             <CalendarRange size={16} />
