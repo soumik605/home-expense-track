@@ -305,6 +305,12 @@ export default function App() {
           source.loadSample();
           reset();
         }}
+        defaultSheet={source.defaultSheet}
+        isDefault={source.isDefault}
+        onDefault={async () => {
+          await source.loadDefault();
+          reset();
+        }}
       />
     </>
   );

@@ -18,9 +18,20 @@ Click the data-source pill in the header (it says **Sample data** at first).
 |---|---|---|
 | **Google Sheet** (recommended) | Share → General access → *Anyone with the link* (Viewer). Open the tab with your table, copy the URL (keep `#gid=…`), paste it. | Re-syncs when you come back to the tab, plus a manual sync button |
 | **Upload Excel** | Drag in `.xlsx` / `.xls` / `.ods` / `.csv` | Re-upload after you add expenses |
-| **Default link** | Copy `.env.example` → `.env.local`, set `VITE_SHEET_URL` to a sheet link, or to a file in `public/` (e.g. `/expenses.xlsx`) | Used on first load |
+| **Default sheet (env)** | Set `VITE_DEFAULT_SHEET` in `.env.local`: a Google Sheet link, or a file in `public/` like `expenses.xlsx` | Opens by default. Changing the value takes effect on next load. The dialog has a **Use default** button |
 
 Everything is parsed in the browser. Nothing goes to a server. The last good data is cached so the page opens instantly.
+
+### Default sheet via env
+
+```bash
+# .env.local  (restart `npm run dev` after editing)
+VITE_DEFAULT_SHEET=https://docs.google.com/spreadsheets/d/XXXX/edit#gid=0
+# or put your workbook at public/expenses.xlsx and use:
+VITE_DEFAULT_SHEET=expenses.xlsx
+```
+
+Vite builds env values into the JavaScript bundle, so anyone who can open the deployed app can see this link.
 
 ### Columns
 

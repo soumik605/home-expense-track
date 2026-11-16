@@ -5,6 +5,20 @@ import type { Expense, LoadedData, SourceConfig } from '../types';
 
 const CONFIG_KEY = 'hbt:source';
 const CACHE_KEY = 'hbt:cache';
+const ENV_KEY = 'hbt:defaultSheet';
+
+/**
+ * Default sheet from the environment (.env / .env.local):
+ *   VITE_DEFAULT_SHEET=https://docs.google.com/spreadsheets/d/…   (Google Sheet link)
+ *   VITE_DEFAULT_SHEET=expenses.xlsx                              (file in /public)
+ * A bare file name is resolved against the app's base path, so it works under sub-paths too.
+ */
+export const DEFAULT_SHEET: string | null = (() => {
+  const raw = (import.meta.env.VITE_DEFAULT_SHEET || import.meta.env.VITE_SHEET_URL || '').trim();
+  if (!raw) return null;
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('/')) return raw;
+  return `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}${raw.replace(/^\.\//, '')}`;
+})();
 
 interface Cache {
   rows: Expense[];
@@ -32,12 +46,36 @@ function write(key: string, value: unknown) {
   }
 }
 
-function initialConfig(): SourceConfig {
-  const stored = read<SourceConfig>(CONFIG_KEY);
-  if (stored) return stored;
-  const envUrl = import.meta.env.VITE_SHEET_URL as string | undefined;
-  return envUrl ? { kind: 'url', url: envUrl } : { kind: 'sample' };
+/**
+ * Which source to open with:
+ * 1. A newly set or changed default sheet always wins, so editing .env takes effect.
+ * 2. Otherwise the source last picked in this browser (connect dialog) is kept.
+ * 3. Otherwise the default sheet, or sample data if none is configured.
+ */
+function resolveInitialConfig(): SourceConfig {
+  const fallback: SourceConfig = DEFAULT_SHEET ? { kind: 'url', url: DEFAULT_SHEET } : { kind: 'sample' };
+  const seenDefault = read<string>(ENV_KEY);
+  if (DEFAULT_SHEET && seenDefault !== DEFAULT_SHEET) {
+    write(ENV_KEY, DEFAULT_SHEET);
+    write(CONFIG_KEY, fallback);
+    return fallback;
+  }
+  if (!DEFAULT_SHEET && seenDefault) {
+    // Default was removed from .env: drop a stored choice that only pointed at it.
+    try {
+      localStorage.removeItem(ENV_KEY);
+    } catch {
+      /* ignore */
+    }
+    const stored = read<SourceConfig>(CONFIG_KEY);
+    if (stored?.kind === 'url' && stored.url === seenDefault) return fallback;
+  }
+  return read<SourceConfig>(CONFIG_KEY) ?? fallback;
 }
+
+let initial: SourceConfig | null = null;
+/** Resolved once per page load (the hook's two lazy initialisers share it). */
+const initialConfig = () => (initial ??= resolveInitialConfig());
 
 function fromCache(config: SourceConfig): { data: LoadedData; syncedAt: number } | null {
   const c = read<Cache>(CACHE_KEY);
@@ -143,6 +181,11 @@ export function useExpenseData() {
     }
   }, [commit]);
 
+  const loadDefault = useCallback(() => {
+    if (!DEFAULT_SHEET) return Promise.resolve();
+    return fetchUrl({ kind: 'url', url: DEFAULT_SHEET }, { throwOnError: true });
+  }, [fetchUrl]);
+
   const refresh = useCallback(() => {
     if (config.kind === 'url') void fetchUrl(config);
   }, [config, fetchUrl]);
@@ -158,5 +201,8 @@ export function useExpenseData() {
     connectUrl,
     connectFile,
     loadSample,
+    loadDefault,
+    defaultSheet: DEFAULT_SHEET,
+    isDefault: config.kind === 'url' && config.url === DEFAULT_SHEET,
   };
 }

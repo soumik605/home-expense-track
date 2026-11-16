@@ -1,4 +1,4 @@
-import { CircleCheck, FileUp, Link2, LoaderCircle, Sparkles, TriangleAlert, UploadCloud } from 'lucide-react';
+import { CircleCheck, FileUp, Link2, LoaderCircle, Sparkles, Star, TriangleAlert, UploadCloud } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 import type { SourceConfig } from '../types';
 import { Sheet } from './Sheet';
@@ -12,9 +12,13 @@ interface Props {
   onConnectUrl: (url: string) => Promise<void>;
   onConnectFile: (file: File) => Promise<void>;
   onSample: () => void;
+  /** Default sheet from VITE_DEFAULT_SHEET, if configured. */
+  defaultSheet?: string | null;
+  isDefault?: boolean;
+  onDefault?: () => Promise<void>;
 }
 
-export function ConnectDialog({ open, config, onClose, onConnectUrl, onConnectFile, onSample }: Props) {
+export function ConnectDialog({ open, config, onClose, onConnectUrl, onConnectFile, onSample, defaultSheet, isDefault, onDefault }: Props) {
   const [tab, setTab] = useState<Tab>(config.kind === 'file' ? 'file' : 'link');
   const [url, setUrl] = useState(config.kind === 'url' ? config.url : '');
   const [busy, setBusy] = useState(false);
@@ -58,6 +62,26 @@ export function ConnectDialog({ open, config, onClose, onConnectUrl, onConnectFi
       title="Connect your expense sheet"
       description="The dashboard reads your sheet directly — nothing is uploaded to a server."
     >
+      {defaultSheet && onDefault && (
+        <div className={`default-sheet ${isDefault ? 'is-current' : ''}`}>
+          <span className="default-sheet-icon" aria-hidden>
+            {isDefault ? <CircleCheck size={16} /> : <Star size={16} />}
+          </span>
+          <span className="default-sheet-text">
+            <span className="default-sheet-title">{isDefault ? 'Showing the default sheet' : 'Default sheet'}</span>
+            <span className="default-sheet-url" title={defaultSheet}>
+              {defaultSheet}
+            </span>
+          </span>
+          {!isDefault && (
+            <button type="button" className="btn btn-sm" disabled={busy} onClick={() => void run(onDefault)}>
+              {busy ? <LoaderCircle size={14} className="spin" /> : null}
+              Use default
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="tabs" role="tablist">
         {tabs.map((t) => (
           <button
